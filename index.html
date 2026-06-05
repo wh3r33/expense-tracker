@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A private localStorage-based personal expense tracker with charts, filters, CSV export, category limits, and multiple currencies.">
+  <title>Personal Expense Tracker</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div id="welcomeScreen" class="welcome-screen" role="status" aria-live="polite" aria-label="Welcome loading screen">
+    <div class="welcome-panel">
+      <p class="welcome-kicker">Personal Expense Tracker</p>
+      <h1>WELCOME</h1>
+      <time id="welcomeTime" class="welcome-time">--:--:--</time>
+      <p id="welcomeWeekday" class="welcome-weekday">Loading</p>
+      <p id="welcomeCountdown" class="welcome-countdown">Loading... 10</p>
+    </div>
+  </div>
+
+  <main id="app" class="app-shell is-hidden" aria-label="Personal Expense Tracker application" aria-hidden="true" inert>
+    <header id="hero" class="hero">
+      <div class="hero-content">
+        <p class="eyebrow" data-i18n="heroEyebrow">Private dashboard</p>
+        <h1 data-i18n="appTitle">Personal Expense Tracker</h1>
+        <p class="hero-copy" data-i18n="heroCopy">Track daily spending, compare categories, set limits, and keep everything stored privately in this browser.</p>
+      </div>
+      <div class="hero-actions" aria-label="Global controls">
+        <label class="field compact-field" for="baseCurrency">
+          <span data-i18n="baseCurrency">Base currency</span>
+          <select id="baseCurrency" aria-label="Choose base currency for totals">
+            <option value="KZT">KZT</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="RUB">RUB</option>
+          </select>
+        </label>
+        <label class="field compact-field" for="themeSelect">
+          <span data-i18n="theme">Theme</span>
+          <select id="themeSelect" aria-label="Choose theme">
+            <option value="soft">Soft</option>
+            <option value="night">Night</option>
+          </select>
+        </label>
+        <label class="field compact-field" for="languageSelect">
+          <span data-i18n="language">Language</span>
+          <select id="languageSelect" aria-label="Choose language">
+            <option value="en">English</option>
+            <option value="ru">Русский</option>
+          </select>
+        </label>
+        <label class="button file-button" for="heroImage">
+          <span data-i18n="addPhoto">Add photo</span>
+          <input id="heroImage" type="file" accept="image/*">
+        </label>
+        <button id="clearHeroImage" class="button ghost-button" type="button" data-i18n="removePhoto">Remove photo</button>
+        <button id="exportCsv" class="button secondary-button" type="button" data-i18n="exportCsv">Export CSV</button>
+      </div>
+    </header>
+
+    <section class="summary-grid" aria-label="Expense summary">
+      <article class="summary-card total-card">
+        <span data-i18n="totalExpenses">Total Expenses</span>
+        <strong id="totalExpenses">0 KZT</strong>
+        <small id="filterLabel">All Time</small>
+      </article>
+      <article class="summary-card">
+        <span data-i18n="records">Records</span>
+        <strong id="expenseCount">0</strong>
+        <small data-i18n="visibleExpenses">Visible expenses</small>
+      </article>
+      <article class="summary-card">
+        <span data-i18n="highestCategory">Highest Category</span>
+        <strong id="highestCategory">None</strong>
+        <small id="highestCategoryAmount">0 KZT</small>
+      </article>
+    </section>
+
+    <nav class="filter-bar" aria-label="Expense date filters">
+      <button class="filter-button is-active" type="button" data-filter="all" aria-pressed="true" data-i18n="allTime">All Time</button>
+      <button class="filter-button" type="button" data-filter="week" aria-pressed="false" data-i18n="lastWeek">Last Week</button>
+      <button class="filter-button" type="button" data-filter="month" aria-pressed="false" data-i18n="lastMonth">Last Month</button>
+    </nav>
+
+    <div class="dashboard-grid">
+      <section class="panel form-panel" aria-labelledby="expenseFormTitle">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow" data-i18n="newRecord">New record</p>
+            <h2 id="expenseFormTitle">Add Expense</h2>
+          </div>
+          <button id="cancelEdit" class="button ghost-button is-hidden" type="button" data-i18n="cancelEdit">Cancel Edit</button>
+        </div>
+
+        <form id="expenseForm" novalidate>
+          <input id="expenseId" type="hidden">
+          <label class="field" for="category">
+            <span data-i18n="category">Category</span>
+            <select id="category" required>
+              <option value="" data-i18n="chooseCategory">Choose category</option>
+              <option value="Food">Food</option>
+              <option value="Transport">Transport</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Subscriptions">Subscriptions</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+
+          <div class="form-row">
+            <label class="field" for="amount">
+              <span data-i18n="amount">Amount</span>
+              <input id="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required>
+            </label>
+            <label class="field" for="currency">
+              <span data-i18n="currency">Currency</span>
+              <select id="currency" required>
+                <option value="KZT">KZT</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="RUB">RUB</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="field" for="date">
+            <span data-i18n="date">Date</span>
+            <input id="date" type="date" required>
+          </label>
+
+          <label class="field" for="description">
+            <span><span data-i18n="description">Description</span> <small data-i18n="optional">(optional)</small></span>
+            <textarea id="description" rows="3" maxlength="160" placeholder="Lunch, metro ticket, streaming subscription..."></textarea>
+          </label>
+
+          <p id="formError" class="form-error" role="alert"></p>
+          <button id="submitExpense" class="button primary-button" type="submit">Add Expense</button>
+        </form>
+      </section>
+
+      <section class="panel chart-panel" aria-labelledby="chartTitle">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow" data-i18n="visualization">Visualization</p>
+            <h2 id="chartTitle" data-i18n="categoryPieChart">Category Pie Chart</h2>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="categoryChart" aria-label="Pie chart showing expenses by category" role="img"></canvas>
+          <p id="chartEmpty" class="empty-note" data-i18n="addFirstExpense">Add your first expense</p>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel" aria-labelledby="categorySettingsTitle">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow" data-i18n="notionStyle">Notion style</p>
+          <h2 id="categorySettingsTitle" data-i18n="categoryEmojis">Category Emojis</h2>
+        </div>
+      </div>
+      <div id="emojiSettings" class="emoji-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="breakdownTitle">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow" data-i18n="limitsAndTotals">Limits and totals</p>
+          <h2 id="breakdownTitle" data-i18n="categoryBreakdown">Category Breakdown</h2>
+        </div>
+      </div>
+      <div id="categoryBreakdown" class="category-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="expenseListTitle">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow" data-i18n="history">History</p>
+          <h2 id="expenseListTitle" data-i18n="allExpenses">All Expenses</h2>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table aria-describedby="expenseListTitle">
+          <thead>
+            <tr>
+              <th scope="col" data-i18n="category">Category</th>
+              <th scope="col" data-i18n="amount">Amount</th>
+              <th scope="col" data-i18n="currency">Currency</th>
+              <th scope="col" data-i18n="date">Date</th>
+              <th scope="col" data-i18n="description">Description</th>
+              <th scope="col" data-i18n="actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="expenseTableBody"></tbody>
+        </table>
+        <div id="emptyState" class="empty-state">
+          <strong data-i18n="addFirstExpense">Add your first expense</strong>
+          <span data-i18n="emptyListCopy">Your filtered expense list will appear here.</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
