@@ -330,7 +330,7 @@ function applyHeroImage() {
     return;
   }
   els.hero.classList.add('has-image');
-  els.hero.style.setProperty('--hero-image', `url("${state.heroImage}")`);
+  els.hero.style.setProperty('--hero-image', `url(${JSON.stringify(state.heroImage)})`);
 }
 
 function applyLanguage() {
